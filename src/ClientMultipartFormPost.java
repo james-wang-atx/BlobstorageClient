@@ -30,9 +30,11 @@ import java.io.File;
 import java.io.PrintWriter;
 import java.lang.String;
 import java.nio.charset.Charset;
+import java.nio.file.NoSuchFileException;
 import java.nio.file.Paths;
 import java.nio.file.Files;
 import java.nio.ByteBuffer;
+
 import org.apache.http.HttpEntity;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpGet;
@@ -47,7 +49,7 @@ import org.apache.http.util.EntityUtils;
  * Using multipart/form encoded POST request to send jpeg image to appengine blobstore
  */
 public class ClientMultipartFormPost {
-    private static final String GetNextUploadURL = "http://10.10.1.6:8080/uploadURL";
+    private static final String GetNextUploadURL = "http://10.10.1.9:8080/uploadURL";
     private static final String UploadURLCacheFile = "C:\\UploadURLCache.txt";              //TODO: use /dev/shm
     
     public static String ReadFileIntoString(String path, Charset encoding) throws Exception 
@@ -151,7 +153,7 @@ public class ClientMultipartFormPost {
                                                                     //   format "rover_<id>_cam<number>.jpg" due to search parameters used in search page.
                                                                     //   e.g. "rover_1_cam1.jpg"
                                                                     //
-                                                                    //   Theoretically, the <id> can be anything that doesn't contain understore, but, for now,
+                                                                    //   Theoretically, the <id> can be anything that doesn't contain underscore, but, for now,
                                                                     //   it should be an ordinal value equivalent to a "serial number".
                                                                     // The camera <number> should likewise be ordinal value
                                                                     //   (which should be always 1 since, we are only installing 1 camera on each rover.)
@@ -205,6 +207,10 @@ public class ClientMultipartFormPost {
             {
                 System.out.println("ERROR! unable to determine the upload URL.");
             }
+        }
+        catch( NoSuchFileException e )
+        {
+            System.out.println("File not found: " + UploadURLCacheFile);        
         }
         finally
         {
