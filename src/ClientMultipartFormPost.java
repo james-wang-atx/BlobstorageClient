@@ -127,7 +127,7 @@ public class ClientMultipartFormPost implements Runnable {
     {
         try
         {
-            for( int i = 0; i < 5; ++i )//while( true )
+            for( int i = 0; i < 1; ++i )//while( true )
             {
                 System.out.println("START OF LOOP UPLOADURL: '" + _nextUploadURL + "'");
                 
@@ -149,13 +149,21 @@ public class ClientMultipartFormPost implements Runnable {
 
                 System.out.println("_imageFilename = " + _imageFilename + ", _blobstoreFilename = " + _blobstoreFilename );
                 
-                HttpEntity reqEntity = MultipartEntityBuilder.create()
-                        .addBinaryBody( name,
+                MultipartEntityBuilder meb = MultipartEntityBuilder.create();                                
+                meb.addBinaryBody( name,
                                         imageFile,
                                         ContentType.create( contenttype ),
-                                        filename )
-                        .build();
+                                        filename );
+                meb.addTextBody("name", "foo");                
+                meb.addTextBody("Fire", "false");                
+                meb.addTextBody("Water", "false");                
+                HttpEntity reqEntity = meb.build();
     
+                System.out.println("reqEntity = " + reqEntity.toString() );
+                
+                //reqEntity.writeTo(os);
+                //System.out.println("reqEntity = " + ; );
+
                 httppost.setEntity(reqEntity);
                 
                 CloseableHttpResponse response = null;
