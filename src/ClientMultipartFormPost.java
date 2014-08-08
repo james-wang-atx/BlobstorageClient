@@ -27,6 +27,7 @@
 //package org.apache.http.examples.entity.mime;
 
 import java.io.File;
+import java.io.IOException;
 import java.io.PrintWriter;
 import java.lang.String;
 import java.nio.charset.Charset;
@@ -48,9 +49,23 @@ import org.apache.http.util.EntityUtils;
 /**
  * Using multipart/form encoded POST request to send jpeg image to appengine blobstore
  */
-public class ClientMultipartFormPost {
-    private static final String GetNextUploadURL = "http://10.10.1.9:8080/uploadURL";
-    private static final String UploadURLCacheFile = "C:\\UploadURLCache.txt";              //TODO: use /dev/shm
+public class ClientMultipartFormPost implements Runnable {
+    private static final String GetNextUploadURL = "http://10.2.100.29:8080/uploadURL";
+//    private static final String UploadURLCacheFile = "C:\\Users\\james_000\\UploadURLCache.txt";              //TODO: use /dev/shm
+    private static final String UploadURLCacheFile = "C:\\Users\\JAMES_~1\\workspace\\git\\BlobstorageClient\\bin\\UploadURLCache.txt";
+    
+    private CloseableHttpClient _httpclient;
+    private String _nextUploadURL;
+    private String _imageFilename;
+    private String _blobstoreFilename;
+    
+    public ClientMultipartFormPost( CloseableHttpClient httpclient, String nextUploadURL, String imageFilename, String blobstoreFilename )
+    {
+        this._httpclient = httpclient;
+        this._nextUploadURL = nextUploadURL;
+        this._imageFilename = imageFilename;
+        this._blobstoreFilename = blobstoreFilename;
+    }
     
     public static String ReadFileIntoString(String path, Charset encoding) throws Exception 
     {
@@ -108,6 +123,110 @@ public class ClientMultipartFormPost {
         return result;
     }
     
+    public void run()
+    {
+        try
+        {
+            for( int i = 0; i < 5; ++i )//while( true )
+            {
+                System.out.println("START OF LOOP UPLOADURL: '" + _nextUploadURL + "'");
+                
+                HttpPost httppost = new HttpPost( _nextUploadURL );
+        
+                httppost.setHeader("enctype", "multipart/form-data");
+                
+                String name          = "roverX";                // magic, form-data, name that our upload server looks for
+                String contenttype   = "image/jpeg";            // mime-type
+                File   imageFile     = new File( _imageFilename );
+                String filename      = _blobstoreFilename;      // magic filename used by blobstore, which we need rover's to set to this strict
+                                                                //   format "rover_<id>_cam<number>.jpg" due to search parameters used in search page.
+                                                                //   e.g. "rover_1_cam1.jpg"
+                                                                //
+                                                                //   Theoretically, the <id> can be anything that doesn't contain underscore, but, for now,
+                                                                //   it should be an ordinal value equivalent to a "serial number".
+                                                                // The camera <number> should likewise be ordinal value
+                                                                //   (which should be always 1 since, we are only installing 1 camera on each rover.)
+
+                System.out.println("_imageFilename = " + _imageFilename + ", _blobstoreFilename = " + _blobstoreFilename );
+                
+                HttpEntity reqEntity = MultipartEntityBuilder.create()
+                        .addBinaryBody( name,
+                                        imageFile,
+                                        ContentType.create( contenttype ),
+                                        filename )
+                        .build();
+    
+                httppost.setEntity(reqEntity);
+                
+                CloseableHttpResponse response = null;
+                
+                try {
+                    System.out.println("executing request " + httppost.getRequestLine());
+                    response = _httpclient.execute(httppost);
+                    
+                    //System.out.println("----------------------------------------");
+                    System.out.println(response.getStatusLine());
+                    HttpEntity resEntity = response.getEntity();
+                    
+                    if (resEntity != null)
+                    {
+                        //System.out.println("Response content length: " + resEntity.getContentLength());
+                        //System.out.println("Response: " + resEntity.getContent());
+                        
+                        String entityString = EntityUtils.toString( resEntity ); 
+                        //System.out.println( entityString );
+                        
+                        String urlMarker = "NEXT-uploadURL:";
+                        int nextURLPosition = entityString.indexOf( urlMarker );
+                        String nextUploadURLandMore = entityString.substring( nextURLPosition + urlMarker.length() );
+                        String[] splitLines = nextUploadURLandMore.split("[\\r\\n]+");
+                        System.out.println("NEXT UPLOADURL: " + splitLines[0]);
+            
+                        // use this for next try
+                        _nextUploadURL = splitLines[0].trim();
+                        
+                        WriteStringIntoFile( _nextUploadURL, UploadURLCacheFile );
+                    }
+                    
+                    EntityUtils.consume(resEntity);
+                }
+                catch( Exception e )
+                {
+                    System.out.println("Exception posting image: " + e.toString());        
+                }
+                finally
+                {
+                    if( response != null ) response.close();
+                }
+
+                try
+                {
+                    Thread.sleep(5000);
+                }
+                catch( InterruptedException e )
+                {
+                    System.out.println("Exception in sleep: " + e.toString());                
+                }
+            } // end-for
+        }
+        catch( IOException e )
+        {
+            System.out.println("Exception closing response: " + e.toString());            
+        }
+        finally
+        {
+            try
+            {
+                _httpclient.close();
+            }
+            catch( IOException e )
+            {
+                System.out.println("Exception closing _httpclient: " + e.toString());        
+            }
+        }
+
+     }
+    
     public static void main(String[] args) throws Exception
     {    
         if (args.length != 2)
@@ -138,70 +257,12 @@ public class ClientMultipartFormPost {
             
             if( nextUploadURL != null && !nextUploadURL.isEmpty() )
             {
-                for( int i = 0; i<1; i++ )//while( true )
-                {
-                    System.out.println("START OF LOOP UPLOADURL: '" + nextUploadURL + "'");
-                    
-                    HttpPost httppost = new HttpPost( nextUploadURL );
-            
-                    httppost.setHeader("enctype", "multipart/form-data");
-                    
-                    String name          = "roverX";                // magic, form-data, name that our upload server looks for
-                    String contenttype   = "image/jpeg";            // mime-type
-                    File   imageFile     = new File( args[0] );
-                    String filename      = args[1];                 // magic filename used by blobstore, which we need rover's to set to this strict
-                                                                    //   format "rover_<id>_cam<number>.jpg" due to search parameters used in search page.
-                                                                    //   e.g. "rover_1_cam1.jpg"
-                                                                    //
-                                                                    //   Theoretically, the <id> can be anything that doesn't contain underscore, but, for now,
-                                                                    //   it should be an ordinal value equivalent to a "serial number".
-                                                                    // The camera <number> should likewise be ordinal value
-                                                                    //   (which should be always 1 since, we are only installing 1 camera on each rover.)
-                    
-                    HttpEntity reqEntity = MultipartEntityBuilder.create()
-                            .addBinaryBody( name,
-                                            imageFile,
-                                            ContentType.create( contenttype ),
-                                            filename )
-                            .build();
-        
-                    httppost.setEntity(reqEntity);
-        
-                    System.out.println("executing request " + httppost.getRequestLine());
-                    CloseableHttpResponse response = httpclient.execute(httppost);
-                    
-                    try {
-                        //System.out.println("----------------------------------------");
-                        System.out.println(response.getStatusLine());
-                        HttpEntity resEntity = response.getEntity();
-                        
-                        if (resEntity != null)
-                        {
-                            //System.out.println("Response content length: " + resEntity.getContentLength());
-                            //System.out.println("Response: " + resEntity.getContent());
-                            
-                            String entityString = EntityUtils.toString( resEntity ); 
-                            //System.out.println( entityString );
-                            
-                            String urlMarker = "NEXT-uploadURL:";
-                            int nextURLPosition = entityString.indexOf( urlMarker );
-                            String nextUploadURLandMore = entityString.substring( nextURLPosition + urlMarker.length() );
-                            String[] splitLines = nextUploadURLandMore.split("[\\r\\n]+");
-                            System.out.println("NEXT UPLOADURL: " + splitLines[0]);
-                
-                            // use this for next try
-                            nextUploadURL = splitLines[0].trim();
-                            
-                            WriteStringIntoFile( nextUploadURL, UploadURLCacheFile );
-                        }
-                        
-                        EntityUtils.consume(resEntity);
-                    }
-                    finally
-                    {
-                        response.close();
-                    }                
-                }
+                Thread thread = new Thread(new ClientMultipartFormPost( httpclient,
+                                                                        nextUploadURL,
+                                                                        args[0],            // image filename
+                                                                        args[1]             // blobstorage magic filename
+                                                                       ) );
+                thread.start();
             }
             else
             {
@@ -211,10 +272,6 @@ public class ClientMultipartFormPost {
         catch( NoSuchFileException e )
         {
             System.out.println("File not found: " + UploadURLCacheFile);        
-        }
-        finally
-        {
-            httpclient.close();
         }
     }    
 }
