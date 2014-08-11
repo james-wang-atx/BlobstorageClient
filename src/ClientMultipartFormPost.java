@@ -132,8 +132,36 @@ public class ClientMultipartFormPost implements Runnable {
         {
             DateFormat df = new SimpleDateFormat("MM dd yyyy HH:mm:ss zzz");
             
-            for( int i = 0; i < 1; ++i )//while( true )
+            while( true )
+            //for( int i = 0; i < 1; ++i )
             {
+                if( _nextUploadURL == null || _nextUploadURL.isEmpty() )
+                {
+                    try
+                    {
+                        _nextUploadURL = QueryUploadURL( _httpclient );
+                    }
+                    catch( Exception eUrl )
+                    {
+                        System.out.println("Exception getting next url: " + eUrl.toString());                    
+                    }                
+                }
+                
+                if( _nextUploadURL == null || _nextUploadURL.isEmpty() )
+                {
+                    try
+                    {
+                        Thread.sleep(5000);
+                    }
+                    catch( InterruptedException e )
+                    {
+                        System.out.println("Exception in sleep: " + e.toString());                
+                    }
+                    
+                    // start loop again...
+                    continue;
+                }
+                
                 System.out.println("START OF LOOP UPLOADURL: '" + _nextUploadURL + "'");
                 
                 HttpPost httppost = new HttpPost( _nextUploadURL );
@@ -163,15 +191,12 @@ public class ClientMultipartFormPost implements Runnable {
                                    filename );
                 meb.addTextBody("name", "rover1");
                 meb.addTextBody("date", df.format(now));
-                meb.addTextBody("fire", "false");                
-                meb.addTextBody("water", "false");                
+                meb.addTextBody("fire", "false");               // when on rover, query gpio                
+                meb.addTextBody("water", "false");              // when on rover, query gpio
                 HttpEntity reqEntity = meb.build();
     
                 System.out.println("reqEntity = " + reqEntity.toString() );
                 
-                //reqEntity.writeTo(os);
-                //System.out.println("reqEntity = " + ; );
-
                 httppost.setEntity(reqEntity);
                 
                 CloseableHttpResponse response = null;
@@ -208,11 +233,25 @@ public class ClientMultipartFormPost implements Runnable {
                 }
                 catch( Exception e )
                 {
-                    System.out.println("Exception posting image: " + e.toString());        
+                    System.out.println("Exception posting image: " + e.toString());
+                    
+                    // try getting a new url
+                    _nextUploadURL = null;                    
                 }
                 finally
                 {
-                    if( response != null ) response.close();
+                    if( response != null )
+                    {
+                        try
+                        {
+                            response.close();
+                        }
+                        catch( IOException e )
+                        {
+                            System.out.println("Exception closing response: " + e.toString());            
+                        }
+                        response = null;
+                    }
                 }
 
                 try
@@ -223,11 +262,7 @@ public class ClientMultipartFormPost implements Runnable {
                 {
                     System.out.println("Exception in sleep: " + e.toString());                
                 }
-            } // end-for
-        }
-        catch( IOException e )
-        {
-            System.out.println("Exception closing response: " + e.toString());            
+            } // end-for or while
         }
         finally
         {
@@ -255,12 +290,15 @@ public class ClientMultipartFormPost implements Runnable {
         
         CloseableHttpClient httpclient = HttpClients.createDefault();
         
-        try {
+        //try
+        {            
             String nextUploadURL = null;
+            /*
+            boolean startWithNewURL = true;
                         
             String urlFromFile = ReadFileIntoString( UploadURLCacheFile, Charset.defaultCharset() );            
 
-            if(urlFromFile == null || urlFromFile.isEmpty())
+            if( startWithNewURL || urlFromFile == null || urlFromFile.isEmpty())
             {
                 nextUploadURL = QueryUploadURL( httpclient );
                 System.out.println("START PROGRAM: GOT UPLOADURL FROM SERVER: '" + nextUploadURL + "'");
@@ -270,24 +308,18 @@ public class ClientMultipartFormPost implements Runnable {
                 nextUploadURL = urlFromFile;
                 System.out.println("START PROGRAM: GOT UPLOADURL FROM FILE: '" + nextUploadURL + "'");
             }
+            */
             
-            if( nextUploadURL != null && !nextUploadURL.isEmpty() )
-            {
-                Thread thread = new Thread(new ClientMultipartFormPost( httpclient,
-                                                                        nextUploadURL,
-                                                                        args[0],            // image filename
-                                                                        args[1]             // blobstorage magic filename (must be in format: rover_x_camN)
-                                                                       ) );
-                thread.start();
-            }
-            else
-            {
-                System.out.println("ERROR! unable to determine the upload URL.");
-            }
+            Thread thread = new Thread(new ClientMultipartFormPost( httpclient,
+                                                                    nextUploadURL,
+                                                                    args[0],            // image filename
+                                                                    args[1]             // blobstorage magic filename (must be in format: rover_x_camN)
+                                                                   ) );
+            thread.start();
         }
-        catch( NoSuchFileException e )
-        {
-            System.out.println("File not found: " + UploadURLCacheFile);        
-        }
+        //catch( NoSuchFileException e )
+        //{
+        //    System.out.println("File not found: " + UploadURLCacheFile);        
+        //}
     }    
 }
