@@ -26,7 +26,11 @@
  */
 //package org.apache.http.examples.entity.mime;
 
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.File;
+import java.io.FileReader;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.lang.String;
@@ -68,6 +72,110 @@ public class ClientMultipartFormPost implements Runnable {
         this._nextUploadURL = nextUploadURL;
         this._imageFilename = imageFilename;
         this._blobstoreFilename = blobstoreFilename;
+    }
+    
+    private static final String GPIOPath = "/sys/class/gpio";
+    private static final String GPIOExportPath = GPIOPath + "/export";
+    private static final int WaterSensorGPIONumber = 30;
+    private static final int FlameSensorGPIONumber = 66;
+    
+    private boolean ExportGpio( int gpio )
+    {
+        String path = GPIOPath + "/gpio" + gpio;
+
+        // check if already exported
+        File f = new File(path);
+        if( f.exists() )
+        {
+            return true;
+        }
+            
+        try
+        {
+            BufferedWriter bw = new BufferedWriter ( new FileWriter ( GPIOExportPath ) );
+            bw.write( "" + gpio );
+            bw.close();
+            
+            return true;
+        }
+        catch(IOException e){
+            System.out.println( "ExportGpio failed - gpio = " + gpio + ", path = " + GPIOExportPath );
+        }
+        
+        return false;
+    }
+    
+    private boolean SetGpioDirection( int gpio, boolean in )
+    {
+        String path = GPIOPath + "/gpio" + gpio + "/direction";
+        
+        try
+        {
+            BufferedWriter bw = new BufferedWriter ( new FileWriter ( path ) );
+            
+            if( in )
+            {
+                bw.write( "in" );            
+            }
+            else
+            {
+                bw.write( "out" );                            
+            }
+            bw.close();
+            
+            return true;
+        }
+        catch(IOException e){
+            System.out.println( "SetGpioDirection failed - " + gpio + ", in = " + in + ", path = " + path );
+        }
+        
+        return false;
+    }
+    
+    private int GetGpioValue( int gpio )
+    {
+        int ret = -1;
+        String path = GPIOPath + "/gpio" + gpio + "/value";
+        
+        try
+        {
+            BufferedReader br = new BufferedReader ( new FileReader ( path ) );
+            int ch = br.read(); //read single char
+            
+            if( ch == '0' )
+            {
+                ret = 0;
+            }
+            else if ( ch == '1' )
+            {
+                ret = 1;
+            }
+            
+            br.close();
+        }
+        catch(IOException e){
+            System.out.println( "GetGpioValue failed - " + gpio + ", path = " + path );
+        }
+        
+        return ret;
+    }
+    
+    private String GetGpioValueAsString( int gpio )
+    {
+        int value = GetGpioValue( gpio );
+        
+        if( value < 0 )
+        {
+            return "unknown";
+        }
+        else if( value == 0 )
+        {
+            return "false";
+        }
+        else
+        {
+            return "true";
+        }
     }
     
     public static String ReadFileIntoString(String path, Charset encoding) throws Exception 
@@ -132,6 +240,12 @@ public class ClientMultipartFormPost implements Runnable {
         {
             DateFormat df = new SimpleDateFormat("MM dd yyyy HH:mm:ss zzz");
             
+            ExportGpio( FlameSensorGPIONumber );
+            SetGpioDirection( FlameSensorGPIONumber, true );
+            
+            ExportGpio( WaterSensorGPIONumber );
+            SetGpioDirection( WaterSensorGPIONumber, true );
+            
             while( true )
             //for( int i = 0; i < 1; ++i )
             {
@@ -191,8 +305,8 @@ public class ClientMultipartFormPost implements Runnable {
                                    filename );
                 meb.addTextBody("name", "rover1");
                 meb.addTextBody("date", df.format(now));
-                meb.addTextBody("fire", "false");               // when on rover, query gpio                
-                meb.addTextBody("water", "false");              // when on rover, query gpio
+                meb.addTextBody("fire", GetGpioValueAsString(FlameSensorGPIONumber));                
+                meb.addTextBody("water", GetGpioValueAsString(WaterSensorGPIONumber));              // when on rover, query gpio
                 HttpEntity reqEntity = meb.build();
     
                 System.out.println("reqEntity = " + reqEntity.toString() );
