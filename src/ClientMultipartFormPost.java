@@ -57,17 +57,19 @@ import org.apache.http.util.EntityUtils;
  * Using multipart/form encoded POST request to send jpeg image to appengine blobstore
  */
 public class ClientMultipartFormPost implements Runnable {
-    private static final String GetNextUploadURL = "http://10.10.1.2:8080/uploadURL";;//"http://10.2.100.29:8080/uploadURL";
+    //private static final String GetNextUploadURL = "http://10.10.1.2:8080/uploadURL"; //"http://10.2.100.29:8080/uploadURL";
 //    private static final String UploadURLCacheFile = "C:\\Users\\james_000\\UploadURLCache.txt";              //TODO: use /dev/shm
     private static final String UploadURLCacheFile = "C:\\Users\\JAMES_~1\\workspace\\git\\BlobstorageClient\\bin\\UploadURLCache.txt";
     
+    private String _GetNextUploadURL;
     private CloseableHttpClient _httpclient;
     private String _nextUploadURL;
     private String _imageFilename;
     private String _blobstoreFilename;
     
-    public ClientMultipartFormPost( CloseableHttpClient httpclient, String nextUploadURL, String imageFilename, String blobstoreFilename )
+    public ClientMultipartFormPost( CloseableHttpClient httpclient, String GetNextUploadURL, String nextUploadURL, String imageFilename, String blobstoreFilename )
     {
+        this._GetNextUploadURL = GetNextUploadURL;
         this._httpclient = httpclient;
         this._nextUploadURL = nextUploadURL;
         this._imageFilename = imageFilename;
@@ -191,7 +193,7 @@ public class ClientMultipartFormPost implements Runnable {
         writer.close();
     }
     
-    public static String QueryUploadURL( CloseableHttpClient httpclient ) throws Exception
+    public static String QueryUploadURL( CloseableHttpClient httpclient, String GetNextUploadURL ) throws Exception
     {
         String result = null;
         
@@ -253,7 +255,7 @@ public class ClientMultipartFormPost implements Runnable {
                 {
                     try
                     {
-                        _nextUploadURL = QueryUploadURL( _httpclient );
+                        _nextUploadURL = QueryUploadURL( _httpclient, _GetNextUploadURL );
                     }
                     catch( Exception eUrl )
                     {
@@ -394,13 +396,13 @@ public class ClientMultipartFormPost implements Runnable {
     
     public static void main(String[] args) throws Exception
     {    
-        if (args.length != 2)
+        if (args.length != 3)
         {
-            System.out.println("File path and blobstore filename not given");
+            System.out.println("GetNextUploadURL, File path, and blobstore filename not given");
             System.exit(1);
         }
         
-        //System.out.println("args[0]=" + args[0] + ", args[1]" + args[1]);
+        System.out.println("args[0]=" + args[0] + ", args[1]" + args[1] + ", args[2]" + args[2]);
         
         CloseableHttpClient httpclient = HttpClients.createDefault();
         
@@ -425,9 +427,10 @@ public class ClientMultipartFormPost implements Runnable {
             */
             
             Thread thread = new Thread(new ClientMultipartFormPost( httpclient,
+                                                                    args[0],            // GetNextUploadURL - url to get upload url
                                                                     nextUploadURL,
-                                                                    args[0],            // image filename
-                                                                    args[1]             // blobstorage magic filename (must be in format: rover_x_camN)
+                                                                    args[1],            // image filename
+                                                                    args[2]             // blobstorage magic filename (must be in format: rover_x_camN)
                                                                    ) );
             thread.start();
         }
