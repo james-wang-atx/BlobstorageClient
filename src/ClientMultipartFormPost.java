@@ -35,6 +35,9 @@ import java.nio.file.NoSuchFileException;
 import java.nio.file.Paths;
 import java.nio.file.Files;
 import java.nio.ByteBuffer;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 
 import org.apache.http.HttpEntity;
 import org.apache.http.client.methods.CloseableHttpResponse;
@@ -50,7 +53,7 @@ import org.apache.http.util.EntityUtils;
  * Using multipart/form encoded POST request to send jpeg image to appengine blobstore
  */
 public class ClientMultipartFormPost implements Runnable {
-    private static final String GetNextUploadURL = "http://10.2.100.29:8080/uploadURL";
+    private static final String GetNextUploadURL = "http://10.10.1.2:8080/uploadURL";;//"http://10.2.100.29:8080/uploadURL";
 //    private static final String UploadURLCacheFile = "C:\\Users\\james_000\\UploadURLCache.txt";              //TODO: use /dev/shm
     private static final String UploadURLCacheFile = "C:\\Users\\JAMES_~1\\workspace\\git\\BlobstorageClient\\bin\\UploadURLCache.txt";
     
@@ -127,11 +130,15 @@ public class ClientMultipartFormPost implements Runnable {
     {
         try
         {
+            DateFormat df = new SimpleDateFormat("MM dd yyyy HH:mm:ss zzz");
+            
             for( int i = 0; i < 1; ++i )//while( true )
             {
                 System.out.println("START OF LOOP UPLOADURL: '" + _nextUploadURL + "'");
                 
                 HttpPost httppost = new HttpPost( _nextUploadURL );
+                
+                Date now = new Date();
         
                 httppost.setHeader("enctype", "multipart/form-data");
                 
@@ -151,12 +158,13 @@ public class ClientMultipartFormPost implements Runnable {
                 
                 MultipartEntityBuilder meb = MultipartEntityBuilder.create();                                
                 meb.addBinaryBody( name,
-                                        imageFile,
-                                        ContentType.create( contenttype ),
-                                        filename );
-                meb.addTextBody("name", "foo");                
-                meb.addTextBody("Fire", "false");                
-                meb.addTextBody("Water", "false");                
+                                   imageFile,
+                                   ContentType.create( contenttype ),
+                                   filename );
+                meb.addTextBody("name", "rover1");
+                meb.addTextBody("date", df.format(now));
+                meb.addTextBody("fire", "false");                
+                meb.addTextBody("water", "false");                
                 HttpEntity reqEntity = meb.build();
     
                 System.out.println("reqEntity = " + reqEntity.toString() );
@@ -268,7 +276,7 @@ public class ClientMultipartFormPost implements Runnable {
                 Thread thread = new Thread(new ClientMultipartFormPost( httpclient,
                                                                         nextUploadURL,
                                                                         args[0],            // image filename
-                                                                        args[1]             // blobstorage magic filename
+                                                                        args[1]             // blobstorage magic filename (must be in format: rover_x_camN)
                                                                        ) );
                 thread.start();
             }
