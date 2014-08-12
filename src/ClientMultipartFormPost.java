@@ -59,7 +59,8 @@ import org.apache.http.util.EntityUtils;
 public class ClientMultipartFormPost implements Runnable {
     //private static final String GetNextUploadURL = "http://10.10.1.2:8080/uploadURL"; //"http://10.2.100.29:8080/uploadURL";
 //    private static final String UploadURLCacheFile = "C:\\Users\\james_000\\UploadURLCache.txt";              //TODO: use /dev/shm
-    private static final String UploadURLCacheFile = "C:\\Users\\JAMES_~1\\workspace\\git\\BlobstorageClient\\bin\\UploadURLCache.txt";
+//    private static final String UploadURLCacheFile = "C:\\Users\\JAMES_~1\\workspace\\git\\BlobstorageClient\\bin\\UploadURLCache.txt";
+    private static final String UploadURLCacheFile = "/dev/shm/UploadURLCache.txt";
     
     private String _GetNextUploadURL;
     private CloseableHttpClient _httpclient;
@@ -170,13 +171,13 @@ public class ClientMultipartFormPost implements Runnable {
         {
             return "unknown";
         }
-        else if( value == 0 )
+        else if( value == 0 )               // ACTIVE-LOW: SO WE ARE INVERTING HERE
         {
-            return "false";
+            return "true";                  // 0 = FLAME/WATER DETECTED = true string
         }
         else
         {
-            return "true";
+            return "false";                 // 1 = NO DETECTION = false string
         }
     }
     
