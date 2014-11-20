@@ -173,6 +173,9 @@ public class ClientMultipartFormPost implements Runnable {
         }
         else if( value == 0 )               // ACTIVE-LOW: SO WE ARE INVERTING HERE
         {
+            // TODO: HERE AND IN CLIENT CHANGE "fire=true" or false to "fire=<timestamp>" or false.
+            //       SAME for water and other simple alarms.
+
             return "true";                  // 0 = FLAME/WATER DETECTED = true string
         }
         else
@@ -249,8 +252,8 @@ public class ClientMultipartFormPost implements Runnable {
             ExportGpio( WaterSensorGPIONumber );
             SetGpioDirection( WaterSensorGPIONumber, true );
             
-            while( true )
-            //for( int i = 0; i < 1; ++i )
+            //while( true )
+            for( int i = 0; i < 1; ++i )
             {
                 if( _nextUploadURL == null || _nextUploadURL.isEmpty() )
                 {
@@ -308,8 +311,13 @@ public class ClientMultipartFormPost implements Runnable {
                                    filename );
                 meb.addTextBody("name", "rover1");
                 meb.addTextBody("date", df.format(now));
-                meb.addTextBody("fire", GetGpioValueAsString(FlameSensorGPIONumber));                
-                meb.addTextBody("water", GetGpioValueAsString(WaterSensorGPIONumber));              // when on rover, query gpio
+                if(false) {
+                    meb.addTextBody("fire", GetGpioValueAsString(FlameSensorGPIONumber));                
+                    meb.addTextBody("water", GetGpioValueAsString(WaterSensorGPIONumber));              // when on rover, query gpio
+                } else {
+                    meb.addTextBody("fire", "true");                
+                    meb.addTextBody("water", "true");                    
+                }
                 HttpEntity reqEntity = meb.build();
     
                 System.out.println("reqEntity = " + reqEntity.toString() );
@@ -336,14 +344,19 @@ public class ClientMultipartFormPost implements Runnable {
                         
                         String urlMarker = "NEXT-uploadURL:";
                         int nextURLPosition = entityString.indexOf( urlMarker );
-                        String nextUploadURLandMore = entityString.substring( nextURLPosition + urlMarker.length() );
-                        String[] splitLines = nextUploadURLandMore.split("[\\r\\n]+");
-                        System.out.println("NEXT UPLOADURL: " + splitLines[0]);
-            
-                        // use this for next try
-                        _nextUploadURL = splitLines[0].trim();
                         
-                        WriteStringIntoFile( _nextUploadURL, UploadURLCacheFile );
+                        if( nextURLPosition >= 0 ) {
+                            String nextUploadURLandMore = entityString.substring( nextURLPosition + urlMarker.length() );
+                            String[] splitLines = nextUploadURLandMore.split("[\\r\\n]+");
+                            System.out.println("NEXT UPLOADURL: " + splitLines[0]);
+                
+                            // use this for next try
+                            _nextUploadURL = splitLines[0].trim();
+                            
+                            WriteStringIntoFile( _nextUploadURL, UploadURLCacheFile );
+                        } else {
+                            System.out.println( "urlMarker (" + urlMarker + ") not found, so _nextUploadURL." );                            
+                        }
                     }
                     
                     EntityUtils.consume(resEntity);
