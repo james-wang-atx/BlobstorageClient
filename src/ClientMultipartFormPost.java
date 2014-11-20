@@ -58,9 +58,14 @@ import org.apache.http.util.EntityUtils;
  */
 public class ClientMultipartFormPost implements Runnable {
     //private static final String GetNextUploadURL = "http://10.10.1.2:8080/uploadURL"; //"http://10.2.100.29:8080/uploadURL";
-//    private static final String UploadURLCacheFile = "C:\\Users\\james_000\\UploadURLCache.txt";              //TODO: use /dev/shm
-//    private static final String UploadURLCacheFile = "C:\\Users\\JAMES_~1\\workspace\\git\\BlobstorageClient\\bin\\UploadURLCache.txt";
-    private static final String UploadURLCacheFile = "/dev/shm/UploadURLCache.txt";
+    
+    //private static final String UploadURLCacheFile = "C:\\Users\\james_000\\UploadURLCache.txt";              //TODO: use /dev/shm
+    
+    // USE THIS FOR LOCAL WINDOWS TESTING:
+    private static final String UploadURLCacheFile = "C:\\Users\\JAMES_~1\\workspace\\git\\BlobstorageClient\\bin\\UploadURLCache.txt";
+    
+    // USE THIS FOR REAL ROVER (ANGSTROM LINUX)
+    //private static final String UploadURLCacheFile = "/dev/shm/UploadURLCache.txt";
     
     private String _GetNextUploadURL;
     private CloseableHttpClient _httpclient;
@@ -355,7 +360,7 @@ public class ClientMultipartFormPost implements Runnable {
                             
                             WriteStringIntoFile( _nextUploadURL, UploadURLCacheFile );
                         } else {
-                            System.out.println( "urlMarker (" + urlMarker + ") not found, so _nextUploadURL." );                            
+                            System.out.println( "urlMarker ('" + urlMarker + "') not found, so NO _nextUploadURL." );                            
                         }
                     }
                     
