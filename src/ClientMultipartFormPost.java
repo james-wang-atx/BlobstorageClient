@@ -62,10 +62,10 @@ public class ClientMultipartFormPost implements Runnable {
     //private static final String UploadURLCacheFile = "C:\\Users\\james_000\\UploadURLCache.txt";              //TODO: use /dev/shm
     
     // USE THIS FOR LOCAL WINDOWS TESTING:
-    private static final String UploadURLCacheFile = "C:\\Users\\JAMES_~1\\workspace\\git\\BlobstorageClient\\bin\\UploadURLCache.txt";
+    //private static final String UploadURLCacheFile = "C:\\Users\\JAMES_~1\\workspace\\git\\BlobstorageClient\\bin\\UploadURLCache.txt";
     
     // USE THIS FOR REAL ROVER (ANGSTROM LINUX)
-    //private static final String UploadURLCacheFile = "/dev/shm/UploadURLCache.txt";
+    private static final String UploadURLCacheFile = "/dev/shm/UploadURLCache.txt";
     
     private String _GetNextUploadURL;
     private CloseableHttpClient _httpclient;
@@ -178,9 +178,7 @@ public class ClientMultipartFormPost implements Runnable {
         }
         else if( value == 0 )               // ACTIVE-LOW: SO WE ARE INVERTING HERE
         {
-            // TODO: HERE AND IN CLIENT CHANGE "fire=true" or false to "fire=<timestamp>" or false.
-            //       SAME for water and other simple alarms.
-
+            System.out.println( "GetGpioValue - " + gpio + " - is TRUE!");
             return "true";                  // 0 = FLAME/WATER DETECTED = true string
         }
         else
@@ -257,8 +255,8 @@ public class ClientMultipartFormPost implements Runnable {
             ExportGpio( WaterSensorGPIONumber );
             SetGpioDirection( WaterSensorGPIONumber, true );
             
-            //while( true )
-            for( int i = 0; i < 1; ++i )
+            while( true )
+            //for( int i = 0; i < 1; ++i )
             {
                 if( _nextUploadURL == null || _nextUploadURL.isEmpty() )
                 {
@@ -316,9 +314,10 @@ public class ClientMultipartFormPost implements Runnable {
                                    filename );
                 meb.addTextBody("name", "rover1");
                 meb.addTextBody("date", df.format(now));
-                if(false) {
+                if(true) {
+                    // when on rover, query gpio
                     meb.addTextBody("fire", GetGpioValueAsString(FlameSensorGPIONumber));                
-                    meb.addTextBody("water", GetGpioValueAsString(WaterSensorGPIONumber));              // when on rover, query gpio
+                    meb.addTextBody("water", GetGpioValueAsString(WaterSensorGPIONumber));
                 } else {
                     meb.addTextBody("fire", "true");                
                     meb.addTextBody("water", "true");                    
@@ -391,7 +390,7 @@ public class ClientMultipartFormPost implements Runnable {
 
                 try
                 {
-                    Thread.sleep(5000);
+                    Thread.sleep(1500);
                 }
                 catch( InterruptedException e )
                 {
